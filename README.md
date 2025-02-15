@@ -15,15 +15,13 @@ durante a execução do script.
 ## Pré-requisitos
 - **Python 3.x**
 - Ambiente virtual (recomendado)
-- openai==0.28
-- praw
 - **API Keys configuradas:**
- - `REDDIT_CLIENT_ID`
- - `REDDIT_CLIENT_SECRET`
- - `REDDIT_USER_AGENT`
- - `OPENAI_API_KEY`
-## Instalção
-1. **Clone o repositrio:**
+  - `REDDIT_CLIENT_ID`
+  - `REDDIT_CLIENT_SECRET`
+  - `REDDIT_USER_AGENT`
+  - `OPENAI_API_KEY`
+## Instalação
+1. **Clone o repositório:**
  ```bash
  git clone https://github.com/marcostolosa/study-insights.git
  cd study-insights
@@ -48,6 +46,7 @@ Certifique-se de configurar as seguintes variáveis de ambiente com suas respect
 - `REDDIT_CLIENT_SECRET`
 - `REDDIT_USER_AGENT`
 - `OPENAI_API_KEY`
+
 Você pode utilizar um arquivo `.env` ou configurar as variáveis diretamente no seu ambiente de
 desenvolvimento.
 ## Como Usar
