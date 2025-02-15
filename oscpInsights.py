@@ -1,9 +1,13 @@
 import os
 import praw
-import openai
-from datetime import datetime, timezone
-import logging
 import sqlite3
+import logging
+from datetime import datetime, timezone
+import ollama
+import re
+
+# Biblioteca para tradução
+from deep_translator import GoogleTranslator
 
 def setup_logging():
     """
@@ -13,15 +17,15 @@ def setup_logging():
 
 def load_api_keys():
     """
-    Carrega as API keys a partir das variáveis de ambiente.
+    Carrega as API keys a partir das variáveis de ambiente (apenas do Reddit, neste caso).
     """
     CLIENT_ID = os.getenv("REDDIT_CLIENT_ID")
     CLIENT_SECRET = os.getenv("REDDIT_CLIENT_SECRET")
     USER_AGENT = os.getenv("REDDIT_USER_AGENT")
-    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-    if not all([CLIENT_ID, CLIENT_SECRET, USER_AGENT, OPENAI_API_KEY]):
-        raise ValueError("❌ Missing API keys! Make sure all API keys are set as environment variables.")
-    return CLIENT_ID, CLIENT_SECRET, USER_AGENT, OPENAI_API_KEY
+
+    if not all([CLIENT_ID, CLIENT_SECRET, USER_AGENT]):
+        raise ValueError("❌ Missing Reddit API keys! Verifique as variáveis de ambiente.")
+    return CLIENT_ID, CLIENT_SECRET, USER_AGENT
 
 def initialize_reddit(client_id, client_secret, user_agent):
     """
@@ -114,57 +118,78 @@ def save_posts_to_db(conn, posts):
 
 def analyze_oscp_success(posts_text):
     """
-    Utiliza a API do OpenAI para analisar o texto dos posts coletados, extraindo insights acionáveis.
+    Utiliza a biblioteca ollama para enviar o prompt ao Ollama (LLM local).
+    Retorna o texto processado como resposta.
     """
-    prompt = f"""
-    Você está analisando histórias de sucesso do OSCP de alta qualidade. Seu objetivo é extrair **insights detalhados e acionáveis** 
-    para futuros estudantes, com base em técnicas reais de estudo, ferramentas e estratégias que funcionaram com eficiência e sagacidade.
+    # Crie uma instância do cliente ollama, se desejar customizar a base_url.
+    client = ollama.Client()
 
-    **Foque em:**
-    - **Ambientes de prática:** HTB, Proving Grounds, laboratórios caseiros, boxes do OSCP aposentadas.
-    - **Técnicas de enumeração:** Portas, serviços, usuários, compartilhamentos.
-    - **Estratégias de escalonamento de privilégios:** Misconfigurações em Windows e Linux, exploits de kernel.
-    - **Ataques a Active Directory:** Kerberoasting, ASREPRoasting, análise com BloodHound.
-    - **Erros comuns e como foram superados.**
-    - **Dicas de gerenciamento de tempo durante o exame.**
-    - **Estratégias de exame para boxes AD e standalone.**
-    - **Técnicas eficazes de escrita de relatórios.**
+    # Prompt do "system" (contexto) e do "usuário" (pedido principal).
+    system_prompt = (
+        "Você é um mentor de cibersegurança ofensiva com 15 anos de experiência prática em exploitation.\n\n"
+    )
 
-    **Estruture sua resposta assim:**
+    user_prompt = f"""
+Por favor, responda em PORTUGUES!
 
-    1️⃣ **Estratégia Principal (por exemplo, Foco em Active Directory)**
-    - 🔹 **Recursos Recomendados:** (por exemplo, série do Derron C no YouTube, TryHackMe, HackTheBox Pro Labs)
-    - 🔹 **Ferramenta Utilizada:** (por exemplo, `BloodHound`, `CrackMapExec`, `Mimikatz`)
-    - 🔹 **Estratégia:** (por exemplo, "Estudantes praticaram construir caminhos de ataque utilizando BloodHound e CrackMapExec.")
-    - 🔹 **Exemplo:** ("Um candidato obteve acesso inicial usando ASREPRoasting e se moveu lateralmente com Pass-The-Hash.")
+Você está analisando histórias de sucesso do OSCP de alta qualidade. Seu objetivo é extrair **insights detalhados e acionáveis** 
+para futuros estudantes, com base em técnicas reais de estudo, ferramentas e estratégias que funcionaram com eficiência e sagacidade.
 
-    **Extraia exatamente 10 técnicas ou práticas de estudo que aparecem com maior frequência.**
+**Foque em:**
+- **Ambientes de prática:** HTB, Proving Grounds, laboratórios caseiros, boxes do OSCP aposentadas.
+- **Técnicas de enumeração:** Portas, serviços, usuários, compartilhamentos.
+- **Estratégias de escalonamento de privilégios:** Misconfigurações em Windows e Linux, exploits de kernel.
+- **Ataques a Active Directory:** Kerberoasting, ASREPRoasting, análise com BloodHound.
+- **Erros comuns e como foram superados.**
+- **Dicas de gerenciamento de tempo durante o exame.**
+- **Estratégias de exame para boxes AD e standalone.**
+- **Técnicas eficazes de escrita de relatórios.**
 
-    **Dados:** 
-    {posts_text}
-    """
+**Estruture sua resposta assim:**
+
+1️⃣ **Estratégia Principal (por exemplo, Foco em Active Directory)**
+- 🔹 **Recursos Recomendados:** (por exemplo, série do Derron C no YouTube, TryHackMe, HackTheBox Pro Labs)
+- 🔹 **Ferramenta Utilizada:** (por exemplo, `BloodHound`, `CrackMapExec`, `Mimikatz`)
+- 🔹 **Estratégia:** (por exemplo, "Estudantes praticaram construir caminhos de ataque utilizando BloodHound e CrackMapExec.")
+- 🔹 **Exemplo:** ("Um candidato obteve acesso inicial usando ASREPRoasting e se moveu lateralmente com Pass-The-Hash.")
+
+**Extraia exatamente 10 técnicas ou práticas de estudo que aparecem com maior frequência.**
+
+**Dados:** 
+{posts_text}
+"""
+
+    # Prompt final concatenando o "system prompt" e o "user prompt"
+    final_prompt = system_prompt + user_prompt
+
     try:
-        response = openai.ChatCompletion.create(
-            model="gpt-4o",  # Utilize "gpt-3.5-turbo" se ocorrerem problemas de rate limit
-            messages=[
-                {"role": "system", "content": "Você é um mentor de cibersegurança ofensiva com 15 anos de experiência prática em exploitation."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.5
+        response = ollama.generate(
+            model="deepseek-r1",
+            prompt=final_prompt
         )
-        return response["choices"][0]["message"]["content"]
+        return response["response"]
     except Exception as e:
-        logging.error(f"Erro na análise com OpenAI: {e}")
-        return "Erro na análise com OpenAI."
+        logging.error(f"Erro ao gerar resposta com Ollama: {e}")
+        return "Erro ao gerar resposta com Ollama."
+
+def remove_think_blocks(text):
+    """
+    Remove todo conteúdo que estiver entre <think>...</think>, incluindo as tags.
+    """
+    return re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
+
+def translate_to_portuguese(text):
+    """
+    Traduz o texto para Português usando deep-translator.
+    """
+    translator = GoogleTranslator(source='auto', target='pt')
+    return translator.translate(text)
 
 def main():
     setup_logging()
     
-    # Carrega e configura as API keys
-    CLIENT_ID, CLIENT_SECRET, USER_AGENT, OPENAI_API_KEY = load_api_keys()
-    openai.api_key = OPENAI_API_KEY
-
-    # Inicializa a API do Reddit
+    # Carrega as credenciais do Reddit
+    CLIENT_ID, CLIENT_SECRET, USER_AGENT = load_api_keys()
     reddit = initialize_reddit(CLIENT_ID, CLIENT_SECRET, USER_AGENT)
     subreddit = reddit.subreddit("oscp")
 
@@ -198,14 +223,24 @@ def main():
         except Exception as e:
             logging.error(f"Erro ao coletar comentários do post {post.id}: {e}")
 
-    full_text = "\n".join(post_texts)[:5000]
-    logging.info("Analisando posts com IA...")
+    # Limitamos a string a ~25000 caracteres, caso seja muito grande
+    full_text = "\n".join(post_texts)[:25000]
+
+    logging.info("Analisando posts com IA (Ollama)...")
     oscp_analysis = analyze_oscp_success(full_text)
+
+    # Remove possíveis blocos <think>...</think> da resposta
+    oscp_analysis = remove_think_blocks(oscp_analysis)
+
+    # Se quiser garantir a tradução final para português,
+    # caso a resposta ainda esteja em inglês ou misturada:
+    oscp_analysis = translate_to_portuguese(oscp_analysis)
 
     # Salva os resultados da análise em um arquivo de texto
     ai_output_file = "oscp_success_analysis.txt"
     with open(ai_output_file, "w", encoding="utf-8") as f:
         f.write(oscp_analysis)
+
     logging.info(f"Análise de IA concluída. Confira '{ai_output_file}' para os resultados.")
 
 if __name__ == '__main__':

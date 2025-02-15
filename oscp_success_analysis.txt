@@ -1,0 +1,28 @@
+** Reflexão final e os próximos passos **
+
+Após um exame hisfioso do OSCP que terminou com 40 pontos, aqui está um resumo estruturado da minha experiência e planos de melhoria:
+
+1. ** Resultado do exame: **
+   - marcou 40 pontos em potencialmente mais altos, sentindo -se parcialmente decepcionada, mas reconhecendo as restrições de tempo.
+
+2. ** Seções e desafios: **
+   - ** Seção de anúncios: ** Encontrado gerenciável com boa preparação.
+   - ** Outras seções (sistemas independentes): ** Me amarrou devido à complexidade e problemas de solução de problemas.
+
+3. ** Solução de problemas de insights: **
+   - Sistemas de articulação inicialmente problemáticos, mas resolvidos com paciência e persistência.
+   - A dependência realizada em uma única ferramenta pode ser arriscada; A diversificação de ferramentas é aconselhável.
+
+4. ** Reflexões pós-exame: **
+   - Precisava de horas extras para a prática de sistemas sozinha.
+   - Automação considerada do encaminhamento de tráfego para otimizar as configurações futuras.
+
+5. ** PRÓXIMOS PASSOS: **
+   - ** Sistemas independentes: ** Dedique mais tempo para praticar essas áreas, com o objetivo de automatizar os processos de eficiência.
+   - ** Ferramentas comuns e técnicas de pivô: ** Revise as dicas para solucionar problemas para evitar futuros contratempos.
+   - ** Ferramentas avançadas: ** Explore técnicas avançadas de articulação e opções de automação, como ferramentas de automação do Ligolo.
+
+6. ** Conclusão: **
+   - Abraçou a curva de aprendizado dessa experiência, com foco nos planos de estudo estratégico para melhorar o desempenho nas tentativas subsequentes.
+
+Essa experiência ressalta a importância de preparação e adaptabilidade completas no domínio dos desafios do OSCP.
